@@ -9,6 +9,9 @@ const overlayText = document.querySelector("#overlayText");
 const startButton = document.querySelector("#startButton");
 
 const BRICK_SCORE = 5;
+const SPEEDUP_INTERVAL_MS = 25000;
+const SPEEDUP_FACTOR = 1.12;
+const MAX_BALL_SPEED = 13;
 const STORAGE_KEY = "brick-breaker-high-score";
 
 let highScore = Number(localStorage.getItem(STORAGE_KEY) || 0);
@@ -16,6 +19,7 @@ let score = 0;
 let gameState = "ready";
 let animationId = 0;
 let firebaseStore = null;
+let lastSpeedUpAt = 0;
 
 const game = {
   width: 960,
@@ -47,7 +51,7 @@ const brickLayout = {
   offsetTop: 74,
 };
 
-const brickColors = ["#ff6b7a", "#ff9f43", "#ffcf5a", "#3dd3bd", "#5ea8ff", "#b18cff"];
+const brickColors = ["#b84f32", "#c45a37", "#a9462e", "#d06a3d", "#b65335", "#ca6138"];
 
 function updateScoreboard() {
   highScoreEl.textContent = highScore.toString();
@@ -77,6 +81,7 @@ function createBricks(previousBricks = []) {
 function resetGame() {
   score = 0;
   gameState = "playing";
+  lastSpeedUpAt = performance.now();
   game.paddle.x = (game.width - game.paddle.width) / 2;
   game.paddle.targetX = game.paddle.x;
   game.ball.x = game.width / 2;
@@ -129,20 +134,27 @@ function setPaddleFromPointer(clientX) {
 
 function drawBackground() {
   const gradient = ctx.createLinearGradient(0, 0, game.width, game.height);
-  gradient.addColorStop(0, "#132124");
-  gradient.addColorStop(0.56, "#111719");
-  gradient.addColorStop(1, "#0c1011");
+  gradient.addColorStop(0, "#79cfff");
+  gradient.addColorStop(0.62, "#bce9ff");
+  gradient.addColorStop(1, "#eefbff");
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, game.width, game.height);
 
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.06)";
-  ctx.lineWidth = 1;
-  for (let x = 0; x < game.width; x += 48) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, game.height);
-    ctx.stroke();
-  }
+  drawCloud(game.width * 0.18, game.height * 0.16, game.width * 0.1);
+  drawCloud(game.width * 0.58, game.height * 0.12, game.width * 0.12);
+  drawCloud(game.width * 0.83, game.height * 0.24, game.width * 0.09);
+}
+
+function drawCloud(x, y, size) {
+  ctx.fillStyle = "rgba(255, 255, 255, 0.82)";
+  ctx.beginPath();
+  ctx.arc(x, y, size * 0.32, Math.PI, 0);
+  ctx.arc(x + size * 0.28, y - size * 0.12, size * 0.42, Math.PI, 0);
+  ctx.arc(x + size * 0.68, y, size * 0.34, Math.PI, 0);
+  ctx.lineTo(x + size * 0.92, y + size * 0.22);
+  ctx.lineTo(x - size * 0.18, y + size * 0.22);
+  ctx.closePath();
+  ctx.fill();
 }
 
 function drawBricks() {
@@ -150,15 +162,21 @@ function drawBricks() {
     if (!brick.alive) continue;
 
     ctx.fillStyle = brick.color;
-    ctx.shadowColor = brick.color;
-    ctx.shadowBlur = 12;
-    roundRect(brick.x, brick.y, brick.width, brick.height, 6);
+    ctx.shadowColor = "rgba(107, 49, 31, 0.22)";
+    ctx.shadowBlur = 5;
+    roundRect(brick.x, brick.y, brick.width, brick.height, 3);
     ctx.fill();
 
     ctx.shadowBlur = 0;
-    ctx.fillStyle = "rgba(255,255,255,0.28)";
-    roundRect(brick.x + 5, brick.y + 4, brick.width - 10, 5, 3);
-    ctx.fill();
+    ctx.strokeStyle = "rgba(98, 44, 28, 0.45)";
+    ctx.lineWidth = 1;
+    roundRect(brick.x + 0.5, brick.y + 0.5, brick.width - 1, brick.height - 1, 3);
+    ctx.stroke();
+
+    ctx.fillStyle = "rgba(255, 207, 170, 0.28)";
+    ctx.fillRect(brick.x + 5, brick.y + 4, brick.width - 10, 3);
+    ctx.fillStyle = "rgba(96, 38, 26, 0.25)";
+    ctx.fillRect(brick.x + brick.width * 0.5 - 1, brick.y + 3, 2, brick.height - 6);
   }
   ctx.shadowBlur = 0;
 }
@@ -212,6 +230,7 @@ function roundRect(x, y, width, height, radius) {
 
 function update() {
   const { paddle, ball } = game;
+  maybeSpeedUpBall();
 
   paddle.x += (paddle.targetX - paddle.x) * paddle.speed;
   ball.x += ball.dx;
@@ -263,13 +282,31 @@ function update() {
 
   if (game.bricks.every((brick) => !brick.alive)) {
     createBricks();
-    ball.dy *= 1.08;
-    ball.dx *= 1.04;
+    speedUpBall(1.06);
   }
 
   if (ball.y - ball.radius > game.height) {
     endGame();
   }
+}
+
+function maybeSpeedUpBall() {
+  const now = performance.now();
+  if (now - lastSpeedUpAt < SPEEDUP_INTERVAL_MS) return;
+
+  lastSpeedUpAt = now;
+  speedUpBall(SPEEDUP_FACTOR);
+}
+
+function speedUpBall(factor) {
+  const { ball } = game;
+  const speed = Math.hypot(ball.dx, ball.dy);
+  if (speed >= MAX_BALL_SPEED) return;
+
+  const nextSpeed = Math.min(speed * factor, MAX_BALL_SPEED);
+  const scale = nextSpeed / speed;
+  ball.dx *= scale;
+  ball.dy *= scale;
 }
 
 function render() {

@@ -9,6 +9,9 @@
 - 공이 패들 아래로 떨어지면 게임 오버
 - 게임 종료 시 최종 점수 표시
 - 좌측 상단에 최고 점수, 그 오른쪽에 현재 점수 표시
+- 벽돌을 모두 부수면 새 벽돌이 생성되어 게임 계속 진행
+- 25초마다 공 속도 증가
+- 파란 하늘과 구름 배경, 벽돌 질감 그래픽
 - Firebase Realtime Database에 최고 점수 저장
 - Firebase 설정이 없으면 브라우저 localStorage에 최고 점수 저장
 
@@ -79,4 +82,3 @@ GitHub 저장소에 이 파일들을 올린 뒤 Vercel에서 해당 저장소를
 - Framework Preset: Other
 - Build Command: 비워두기
 - Output Directory: `.`
-
