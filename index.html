@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Brick Breaker</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="game-shell">
+      <section class="hud" aria-label="score board">
+        <div class="score-box">
+          <span>최고 점수</span>
+          <strong id="highScore">0</strong>
+        </div>
+        <div class="score-box">
+          <span>현재 점수</span>
+          <strong id="currentScore">0</strong>
+        </div>
+      </section>
+
+      <section class="stage-wrap">
+        <canvas id="gameCanvas" width="960" height="640" aria-label="벽돌깨기 게임 화면"></canvas>
+        <div id="overlay" class="overlay">
+          <div class="overlay-panel">
+            <p id="overlayKicker">Brick Breaker</p>
+            <h1 id="overlayTitle">벽돌깨기</h1>
+            <p id="overlayText">마우스를 움직여 패들을 조작하고 공을 튕겨 벽돌을 부수세요.</p>
+            <button id="startButton" type="button">게임 시작</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="./game.js"></script>
+  </body>
+</html>
