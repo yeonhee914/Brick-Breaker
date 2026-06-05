@@ -307,16 +307,16 @@ async function loadFirebaseHighScore() {
     if (!firebaseConfig?.apiKey) return;
 
     const appModule = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js");
-    const firestoreModule = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js");
+    const databaseModule = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js");
 
     const app = appModule.initializeApp(firebaseConfig);
-    const db = firestoreModule.getFirestore(app);
-    const docRef = firestoreModule.doc(db, "scores", "brick-breaker");
-    const snapshot = await firestoreModule.getDoc(docRef);
+    const db = databaseModule.getDatabase(app);
+    const scoreRef = databaseModule.ref(db, "scores/brick-breaker/highScore");
+    const snapshot = await databaseModule.get(scoreRef);
 
-    firebaseStore = { db, firestoreModule, docRef };
+    firebaseStore = { databaseModule, scoreRef };
     if (snapshot.exists()) {
-      highScore = Math.max(highScore, Number(snapshot.data().highScore || 0));
+      highScore = Math.max(highScore, Number(snapshot.val() || 0));
       localStorage.setItem(STORAGE_KEY, highScore.toString());
       updateScoreboard();
     }
@@ -328,26 +328,17 @@ async function loadFirebaseHighScore() {
 async function saveHighScore(finalScore) {
   if (!firebaseStore || finalScore < highScore) return;
 
-  const { db, firestoreModule, docRef } = firebaseStore;
+  const { databaseModule, scoreRef } = firebaseStore;
   try {
-    await firestoreModule.runTransaction(db, async (transaction) => {
-      const snapshot = await transaction.get(docRef);
-      const remoteHighScore = snapshot.exists() ? Number(snapshot.data().highScore || 0) : 0;
-
-      if (finalScore >= remoteHighScore) {
-        transaction.set(
-          docRef,
-          {
-            highScore: finalScore,
-            updatedAt: firestoreModule.serverTimestamp(),
-          },
-          { merge: true },
-        );
-        highScore = Math.max(highScore, finalScore);
-      } else {
-        highScore = Math.max(highScore, remoteHighScore);
-      }
+    const result = await databaseModule.runTransaction(scoreRef, (currentValue) => {
+      const remoteHighScore = Number(currentValue || 0);
+      return Math.max(remoteHighScore, finalScore);
     });
+
+    if (result.snapshot.exists()) {
+      highScore = Math.max(highScore, Number(result.snapshot.val() || 0));
+    }
+
     localStorage.setItem(STORAGE_KEY, highScore.toString());
     updateScoreboard();
   } catch {

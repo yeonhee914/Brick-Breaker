@@ -9,8 +9,58 @@
 - 공이 패들 아래로 떨어지면 게임 오버
 - 게임 종료 시 최종 점수 표시
 - 좌측 상단에 최고 점수, 그 오른쪽에 현재 점수 표시
-- Firebase 설정이 있으면 Firestore에 최고 점수 저장
+- Firebase Realtime Database에 최고 점수 저장
 - Firebase 설정이 없으면 브라우저 localStorage에 최고 점수 저장
+
+## Firebase Realtime Database 설정
+
+1. Firebase Console에서 프로젝트를 만듭니다.
+2. Realtime Database를 만들고 데이터베이스 URL을 확인합니다.
+   예: `https://brick-breaker-ea91f-default-rtdb.firebaseio.com`
+3. Firebase 프로젝트 설정에서 웹 앱을 추가합니다.
+4. `firebase-config.example.js`를 복사해서 `firebase-config.js` 파일을 만듭니다.
+5. Firebase 웹 앱 설정 값을 `firebase-config.js`에 입력합니다.
+
+`firebase-config.js` 예시:
+
+```js
+export const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID",
+};
+```
+
+최고 점수는 아래 경로에 저장됩니다.
+
+```txt
+scores/brick-breaker/highScore
+```
+
+## Realtime Database Rules
+
+Firebase Console > Realtime Database > 규칙 탭에 아래 규칙을 넣습니다.
+
+```json
+{
+  "rules": {
+    "scores": {
+      "brick-breaker": {
+        "highScore": {
+          ".read": true,
+          ".write": "newData.isNumber() && newData.val() >= 0 && (!data.exists() || newData.val() >= data.val())"
+        }
+      }
+    }
+  }
+}
+```
+
+이 규칙은 누구나 최고 점수를 읽을 수 있게 하고, 기존 최고 점수보다 낮은 값으로 덮어쓰는 것을 막습니다.
 
 ## 실행
 
@@ -20,27 +70,6 @@
 
 ```bash
 npx serve .
-```
-
-## Firebase 설정
-
-1. Firebase Console에서 웹 앱을 만들고 Firestore Database를 활성화합니다.
-2. `firebase-config.example.js`를 복사해서 `firebase-config.js` 파일을 만듭니다.
-3. Firebase Console의 웹 앱 설정 값을 `firebase-config.js`에 입력합니다.
-4. Firestore에는 `scores/brick-breaker` 문서가 자동으로 만들어지고 `highScore` 값이 갱신됩니다.
-
-개발 초기에는 아래처럼 테스트 규칙을 사용할 수 있습니다. 공개 점수판이므로 실제 운영 전에는 악용 방지 로직을 추가하는 것이 좋습니다.
-
-```txt
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /scores/brick-breaker {
-      allow read: if true;
-      allow write: if true;
-    }
-  }
-}
 ```
 
 ## Vercel 배포
